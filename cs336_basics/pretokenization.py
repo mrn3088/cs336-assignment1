@@ -1,7 +1,7 @@
 import argparse
 import os
 from typing import BinaryIO
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections import Counter
 import regex as re
 from concurrent.futures import ProcessPoolExecutor
@@ -63,16 +63,22 @@ class PreTokenizeChunkRequest:
     start: int
     end: int
     file_path: str
+    special_tokens: list[str]
 
 
 def pre_tokenize_chunk(request: PreTokenizeChunkRequest) -> Counter[bytes]:
+    escaped = sorted((re.escape(s) for s in request.special_tokens), key=len, reverse=True)
+    special_pattern = "(?:" + "|".join(escaped) + ")"
+
     with open(request.file_path, "rb") as f:
         f.seek(request.start)
         chunk = f.read(
             request.end - request.start).decode("utf-8", errors="ignore")
+        parts = re.split(special_pattern, chunk)
         c = Counter()
-        for m in PAT_RE.finditer(chunk):
-            c[m.group(0).encode("utf-8")] += 1
+        for part in parts:
+            for m in PAT_RE.finditer(part):
+                c[m.group(0).encode("utf-8")] += 1
         return c
 
 
@@ -80,20 +86,23 @@ def pre_tokenize_chunk(request: PreTokenizeChunkRequest) -> Counter[bytes]:
 class PreTokenizationRequest:
     file_path: str
     num_processes: int = 4
-    special_token: str = "<|endoftext|>"
+    special_tokens: list[str] = field(default_factory=lambda: ["<|endoftext|>"])
 
 
 def run_pre_tokenization(request: PreTokenizationRequest) -> Counter[bytes]:
     """Run pre-tokenization on the file."""
     with open(request.file_path, "rb") as f:
         boundaries = find_chunk_boundaries(
-            f, request.num_processes, request.special_token.encode("utf-8"))
+            f, request.num_processes, request.special_tokens[0].encode("utf-8")) # FIXME: Handle multiple special tokens
         print(f"Boundaries: {boundaries}")
 
         # Create chunk requests for parallel processing
         chunk_requests = [
             PreTokenizeChunkRequest(
-                start=start, end=end, file_path=request.file_path)
+                start=start, 
+                end=end, 
+                file_path=request.file_path, 
+                special_tokens=request.special_tokens)
             for start, end in zip(boundaries[:-1], boundaries[1:])
         ]
 
@@ -136,7 +145,7 @@ def main():
     request = PreTokenizationRequest(
         file_path=args.file_path,
         num_processes=args.num_processes,
-        special_token=args.split_token
+        special_tokens=[args.split_token]
     )
 
     total_pre_token_counts = run_pre_tokenization(request)

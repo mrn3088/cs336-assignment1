@@ -127,15 +127,12 @@ class BPETokenizer:
     def _pre_tokenize(self) -> Counter[bytes]:
         """Pre-tokenize the input file."""
         print(f"Pre-tokenizing {self.input_path}...")
-        request = PreTokenizationRequest(file_path=self.input_path)
+        request = PreTokenizationRequest(file_path=self.input_path, special_tokens=self.special_tokens)
         return run_pre_tokenization(request)
 
     def train(self) -> None:
         """Train the BPE tokenizer by iterating over the training data."""
         pre_token_counts = self._pre_tokenize()
-        # Remove special tokens from the pre-token counts
-        for st in self.special_tokens:
-            pre_token_counts.pop(st.encode("utf-8"), None)
         # Create the merge controller and subscribe the pre-token infos
         next_available_id = len(self.vocab)
         mc_controller = MergeController()
