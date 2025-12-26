@@ -16,8 +16,7 @@ class PreTokenInfo:
     bytes_sequence: list[bytes]
     token_freq: int
     byte_pair_freq: Counter[tuple[bytes, bytes]] = field(init=False)
-    mc_controller: "MergeController" = field(
-        init=False, repr=False, compare=False)
+    mc_controller: "MergeController" = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         """Automatically calculate initial byte pair frequencies"""
@@ -76,8 +75,7 @@ class PreTokenInfo:
         for b1, b2 in itertools.pairwise(self.bytes_sequence):
             self.byte_pair_freq[(b1, b2)] += self.token_freq
             # Add the new byte pair to the merge controller
-            self.mc_controller.byte_pair_to_subscribers[(
-                b1, b2)].add(self.mc_id)
+            self.mc_controller.byte_pair_to_subscribers[(b1, b2)].add(self.mc_id)
         self.mc_controller.global_byte_pair_freq.update(self.byte_pair_freq)
 
     def subscribe(self, mc_controller: "MergeController") -> None:
@@ -97,8 +95,7 @@ class MergeController:
     byte_pair_to_subscribers: defaultdict[tuple[bytes, bytes], set[int]] = field(
         default_factory=lambda: defaultdict(set)
     )
-    global_byte_pair_freq: Counter[tuple[bytes, bytes]] = field(
-        default_factory=Counter)
+    global_byte_pair_freq: Counter[tuple[bytes, bytes]] = field(default_factory=Counter)
 
     def merge(self, byte_pair: tuple[bytes, bytes]) -> None:
         """
@@ -115,8 +112,7 @@ class MergeController:
         Get the most frequent byte pair in the global byte pair frequency.
         To break ties, we use the lexicographical order of the byte pair.
         """
-        items = [(p, c)
-                 for p, c in self.global_byte_pair_freq.items() if c > 0]
+        items = [(p, c) for p, c in self.global_byte_pair_freq.items() if c > 0]
         if not items:
             return None
         return max(items, key=lambda x: (x[1], x[0]))[0]
@@ -166,8 +162,7 @@ class BPETokenizer:
         Returns:
             A BPE tokenizer that uses the provided vocab, merges, and special tokens.
         """
-        tokenizer = cls(vocab_size=len(vocab),
-                        special_tokens=special_tokens or [])
+        tokenizer = cls(vocab_size=len(vocab), special_tokens=special_tokens or [])
         tokenizer.vocab = vocab
         tokenizer.merges = merges
         tokenizer.vocab_reverse = {b: i for i, b in vocab.items()}
@@ -177,8 +172,7 @@ class BPETokenizer:
     def _pre_tokenize(self, input_path: str) -> Counter[bytes]:
         """Pre-tokenize the input file."""
         print(f"Pre-tokenizing {input_path}...")
-        request = PreTokenizationRequest(
-            file_path=input_path, special_tokens=self.special_tokens)
+        request = PreTokenizationRequest(file_path=input_path, special_tokens=self.special_tokens)
         return run_pre_tokenization(request)
 
     def _build_merge_rank(self) -> None:
@@ -193,8 +187,7 @@ class BPETokenizer:
         next_available_id = len(self.vocab)
         mc_controller = MergeController()
         for i, (pre_token_id, pre_token_count) in enumerate(pre_token_counts.items()):
-            pre_token_info = PreTokenInfo.from_pre_token_count(
-                i, pre_token_id, pre_token_count)
+            pre_token_info = PreTokenInfo.from_pre_token_count(i, pre_token_id, pre_token_count)
             pre_token_info.subscribe(mc_controller)
         # Main training loop
         while len(self.vocab) < self.vocab_size:
@@ -238,7 +231,7 @@ class BPETokenizer:
         if best is None:
             return tokens, False
         else:
-            return tokens[: best[1]] + [tokens[best[1]] + tokens[best[1] + 1]] + tokens[best[1] + 2:], True
+            return tokens[: best[1]] + [tokens[best[1]] + tokens[best[1] + 1]] + tokens[best[1] + 2 :], True
 
     def _encode_token(self, token: bytes) -> list[int]:
         """Encode a token based on merges and vocab"""
@@ -264,9 +257,11 @@ class BPETokenizer:
         """
         if not text:
             return []
+        # If no special tokens, encode the whole text directly
+        if not self.special_tokens:
+            return self._encode_part(text)
         # Split text by special tokens
-        special_pattern = "(" + "|".join(re.escape(s)
-                                         for s in self.special_tokens) + ")"
+        special_pattern = "(" + "|".join(re.escape(s) for s in self.special_tokens) + ")"
         parts = re.split(special_pattern, text)
         ids = []
         for part in parts:
@@ -284,13 +279,16 @@ class BPETokenizer:
         that lazily yields token IDs. This is required for memory-efficient tokenization
         of large files that we cannot directly load into memory.
         """
-        # Build the special token pattern once (same as in encode)
-        special_pattern = "(" + "|".join(re.escape(s)
-                                         for s in self.special_tokens) + ")"
-
         for text in iterable:
             if not text:
                 continue
+            # If no special tokens, encode the whole text directly
+            if not self.special_tokens:
+                for token in pre_tokenize_text_iter(text):
+                    yield from self._encode_token(token)
+                continue
+            # Build the special token pattern once (same as in encode)
+            special_pattern = "(" + "|".join(re.escape(s) for s in self.special_tokens) + ")"
             # Split text by special tokens
             parts = re.split(special_pattern, text)
             for part in parts:
@@ -305,4 +303,5 @@ class BPETokenizer:
 
     def decode(self, ids: list[int]) -> str:
         """Decode a list of token IDs into a string."""
-        raise NotImplementedError("Decoding is not implemented yet")
+        all_bytes = b"".join(self.vocab[tok_id] for tok_id in ids)
+        return all_bytes.decode("utf-8", errors="replace")
