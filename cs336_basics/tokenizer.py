@@ -1,9 +1,10 @@
 import itertools
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
 
-from .pretokenization import run_pre_tokenization, PreTokenizationRequest
+from .pretokenization import run_pre_tokenization, PreTokenizationRequest, pre_tokenize_text_iter
 
 
 @dataclass
@@ -95,7 +96,10 @@ class MergeController:
     )
     global_byte_pair_freq: Counter[tuple[bytes, bytes]] = field(default_factory=Counter)
 
-    def merge(self, byte_pair: tuple[bytes, bytes]):
+    def merge(self, byte_pair: tuple[bytes, bytes]) -> None:
+        """
+        Merge the given byte pair.
+        """
         assert byte_pair in self.byte_pair_to_subscribers, f"Byte pair {byte_pair} not found in subscribers"
         for pre_token_info_id in list(
             self.byte_pair_to_subscribers[byte_pair]
@@ -116,33 +120,68 @@ class MergeController:
 class BPETokenizer:
     """BPE (Byte Pair Encoding) tokenizer implementation."""
 
-    input_path: str
     vocab_size: int
     special_tokens: list[str]
+    vocab: dict[int, bytes]
+    merges: list[tuple[bytes, bytes]]
+    vocab_reverse: dict[bytes, int]
+    merge_rank: dict[tuple[bytes, bytes], int]
 
-    def __init__(self, input_path: str, vocab_size: int, special_tokens: list[str]):
-        self.input_path = input_path
+    def __init__(self, vocab_size: int, special_tokens: list[str]):
         self.vocab_size = vocab_size
-        self.special_tokens = special_tokens
-        self.vocab: dict[int, bytes] = {}
-        self.merges: list[tuple[bytes, bytes]] = []
+        self.special_tokens = sorted(special_tokens, key=len, reverse=True)
+        self.vocab = {}
+        self.merges = []
+        self.merge_rank = {}
+        self.vocab_reverse = {}
         # Add special tokens
         for i, special_token in enumerate(special_tokens):
-            self.vocab[i] = special_token.encode("utf-8")
+            b = special_token.encode("utf-8")
+            self.vocab[i] = b
+            self.vocab_reverse[b] = i
         # Add single byte tokens
         num_special_token = len(self.vocab)
         for i in range(256):
-            self.vocab[i + num_special_token] = bytes([i])
+            b = bytes([i])
+            self.vocab[i + num_special_token] = b
+            self.vocab_reverse[b] = i + num_special_token
 
-    def _pre_tokenize(self) -> Counter[bytes]:
+    @classmethod
+    def from_trained_vocab_and_merges(
+        cls, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: list[str] | None = None
+    ) -> "BPETokenizer":
+        """
+        Create a BPE tokenizer from a trained vocabulary and merges.
+        Args:
+            vocab: A mapping from token ID (int) to token bytes (bytes)
+            merges: A list of merge tuples, where each tuple contains two bytes
+                representing tokens that were merged together.
+            special_tokens: A list of special tokens to add to the tokenizer.
+
+        Returns:
+            A BPE tokenizer that uses the provided vocab, merges, and special tokens.
+        """
+        tokenizer = cls(vocab_size=len(vocab), special_tokens=special_tokens or [])
+        tokenizer.vocab = vocab
+        tokenizer.merges = merges
+        tokenizer._build_merge_rank()
+        tokenizer.vocab_reverse = {b: i for i, b in vocab.items()}
+        return tokenizer
+
+    def _pre_tokenize(self, input_path: str) -> Counter[bytes]:
         """Pre-tokenize the input file."""
-        print(f"Pre-tokenizing {self.input_path}...")
-        request = PreTokenizationRequest(file_path=self.input_path, special_tokens=self.special_tokens)
+        print(f"Pre-tokenizing {input_path}...")
+        request = PreTokenizationRequest(file_path=input_path, special_tokens=self.special_tokens)
         return run_pre_tokenization(request)
 
-    def train(self) -> None:
+    def _build_merge_rank(self) -> None:
+        """Build the merge rank dictionary."""
+        merge_rank = {m: i for i, m in enumerate(self.merges)}
+        self.merge_rank = merge_rank
+
+    def train(self, input_path: str) -> None:
         """Train the BPE tokenizer by iterating over the training data."""
-        pre_token_counts = self._pre_tokenize()
+        pre_token_counts = self._pre_tokenize(input_path)
         # Create the merge controller and subscribe the pre-token infos
         next_available_id = len(self.vocab)
         mc_controller = MergeController()
@@ -158,7 +197,10 @@ class BPETokenizer:
             mc_controller.merge(most_frequent_byte_pair)
             new_token = most_frequent_byte_pair[0] + most_frequent_byte_pair[1]
             self.vocab[next_available_id] = new_token
+            self.vocab_reverse[new_token] = next_available_id
             next_available_id += 1
+        # Build the merge rank dictionary
+        self._build_merge_rank()
 
     def get_vocab_and_merges(
         self,
@@ -172,3 +214,54 @@ class BPETokenizer:
                   representing tokens that were merged together.
         """
         return self.vocab, self.merges
+
+    def _find_token_to_merge(self, tokens: list[bytes]) -> tuple[list[bytes], bool]:
+        """
+        If there's a token in the list that can be merged with the next token, merge it, and return the merged token list.
+        """
+        best: tuple[int, int] | None = None  # (rank, i)
+        for i in range(len(tokens) - 1):
+            if (tokens[i], tokens[i + 1]) not in self.merges:
+                continue
+            rank = self.merge_rank[(tokens[i], tokens[i + 1])]
+            if best is None or rank < best[0]:
+                best = (rank, i)
+        if best is None:
+            return tokens, False
+        else:
+            return tokens[: best[1]] + [tokens[best[1]] + tokens[best[1] + 1]] + tokens[best[1] + 2 :], True
+
+    def _encode_token(self, token: bytes) -> list[int]:
+        """Encode a token based on merges and vocab"""
+        toks = [bytes([b]) for b in token]
+        while True:
+            toks, can_merge = self._find_token_to_merge(toks)
+            if not can_merge:
+                break
+        return [self.vocab_reverse[tok] for tok in toks]
+
+    def _encode_part(self, part: str) -> list[int]:
+        """
+        Encode a part (without special tokens) of text into a list of token IDs.
+        """
+        ids = []
+        for token in pre_tokenize_text_iter(part):
+            ids.extend(self._encode_token(token))
+        return ids
+
+    def encode(self, text: str) -> list[int]:
+        """
+        Encode a text string into a list of token IDs.
+        """
+        if not text:
+            return []
+        # Split text by special tokens
+        special_pattern = "(" + "|".join(re.escape(s) for s in self.special_tokens) + ")"
+        parts = re.split(special_pattern, text)
+        ids = []
+        for part in parts:
+            if part in self.special_tokens:
+                ids.append(self.vocab_reverse[part.encode("utf-8")])
+            else:
+                ids.extend(self._encode_part(part))
+        return ids

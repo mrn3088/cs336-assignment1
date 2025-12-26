@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import argparse
 import os
 from typing import BinaryIO
@@ -8,6 +9,14 @@ from concurrent.futures import ProcessPoolExecutor
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 PAT_RE = re.compile(PAT)
+
+
+def pre_tokenize_text_iter(text: str) -> Iterator[bytes]:
+    """
+    Pre-tokenize a text string into a sequence of bytes.
+    """
+    for m in PAT_RE.finditer(text):
+        yield m.group(0).encode("utf-8")
 
 
 def find_chunk_boundaries(
@@ -75,8 +84,8 @@ def pre_tokenize_chunk(request: PreTokenizeChunkRequest) -> Counter[bytes]:
         parts = re.split(special_pattern, chunk)
         c = Counter()
         for part in parts:
-            for m in PAT_RE.finditer(part):
-                c[m.group(0).encode("utf-8")] += 1
+            for b in pre_tokenize_text_iter(part):
+                c[b] += 1
         return c
 
 
