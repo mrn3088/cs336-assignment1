@@ -19,8 +19,7 @@ def find_chunk_boundaries(
     Chunk the file into parts that can be counted independently.
     May return fewer chunks if the boundaries end up overlapping.
     """
-    assert isinstance(split_special_token,
-                      bytes), "Must represent special token as a bytestring"
+    assert isinstance(split_special_token, bytes), "Must represent special token as a bytestring"
 
     # Get total file size in bytes
     file.seek(0, os.SEEK_END)
@@ -72,8 +71,7 @@ def pre_tokenize_chunk(request: PreTokenizeChunkRequest) -> Counter[bytes]:
 
     with open(request.file_path, "rb") as f:
         f.seek(request.start)
-        chunk = f.read(
-            request.end - request.start).decode("utf-8", errors="ignore")
+        chunk = f.read(request.end - request.start).decode("utf-8", errors="ignore")
         parts = re.split(special_pattern, chunk)
         c = Counter()
         for part in parts:
@@ -93,24 +91,22 @@ def run_pre_tokenization(request: PreTokenizationRequest) -> Counter[bytes]:
     """Run pre-tokenization on the file."""
     with open(request.file_path, "rb") as f:
         boundaries = find_chunk_boundaries(
-            f, request.num_processes, request.special_tokens[0].encode("utf-8")) # FIXME: Handle multiple special tokens
+            f, request.num_processes, request.special_tokens[0].encode("utf-8")
+        )  # FIXME: Handle multiple special tokens
         print(f"Boundaries: {boundaries}")
 
         # Create chunk requests for parallel processing
         chunk_requests = [
             PreTokenizeChunkRequest(
-                start=start, 
-                end=end, 
-                file_path=request.file_path, 
-                special_tokens=request.special_tokens)
+                start=start, end=end, file_path=request.file_path, special_tokens=request.special_tokens
+            )
             for start, end in zip(boundaries[:-1], boundaries[1:])
         ]
 
         # Process chunks in parallel (cap processes at num_processes)
         num_workers = min(len(chunk_requests), request.num_processes)
         with ProcessPoolExecutor(max_workers=num_workers) as executor:
-            chunk_counts = list(executor.map(
-                pre_tokenize_chunk, chunk_requests))
+            chunk_counts = list(executor.map(pre_tokenize_chunk, chunk_requests))
 
         # Combine all counters
         total = Counter()
@@ -120,32 +116,17 @@ def run_pre_tokenization(request: PreTokenizationRequest) -> Counter[bytes]:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Chunk a file for parallel pre-tokenization processing")
+    parser = argparse.ArgumentParser(description="Chunk a file for parallel pre-tokenization processing")
+    parser.add_argument("file_path", type=str, help="Path to the file to process")
+    parser.add_argument("--num-processes", type=int, default=4, help="Desired number of chunks/processes (default: 4)")
     parser.add_argument(
-        "file_path",
-        type=str,
-        help="Path to the file to process"
-    )
-    parser.add_argument(
-        "--num-processes",
-        type=int,
-        default=4,
-        help="Desired number of chunks/processes (default: 4)"
-    )
-    parser.add_argument(
-        "--split-token",
-        type=str,
-        default="<|endoftext|>",
-        help="Special token to split on (default: '<|endoftext|>')"
+        "--split-token", type=str, default="<|endoftext|>", help="Special token to split on (default: '<|endoftext|>')"
     )
 
     args = parser.parse_args()
 
     request = PreTokenizationRequest(
-        file_path=args.file_path,
-        num_processes=args.num_processes,
-        special_tokens=[args.split_token]
+        file_path=args.file_path, num_processes=args.num_processes, special_tokens=[args.split_token]
     )
 
     total_pre_token_counts = run_pre_tokenization(request)
