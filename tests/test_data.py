@@ -59,6 +59,8 @@ def test_get_batch():
                 f"Starting index {starting_index} occurs {count} times, but expected at most {occurrences_upper_bound}"
             )
 
+    # pytest.raises accepts tuple of exception types
+    # type: ignore[arg-type]
     with pytest.raises((RuntimeError, AssertionError)) as excinfo:
         # We're assuming that cuda:99 is an invalid device ordinal.
         # Just adding this here to make sure that the device flag is

@@ -45,9 +45,18 @@ line-length = 120
 # Also ignore `E402` in all `__init__.py` files.
 "__init__.py" = ["E402", "F401", "F403", "E501"]
 
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
+
 [dependency-groups]
 dev = [
+    "pyrefly>=0.46.1",
     "ruff>=0.14.10",
+    "types-psutil>=7.1.3.20251211",
+    "types-regex>=2025.11.3.20251106",
 ]
 
 [tool.ruff.lint]

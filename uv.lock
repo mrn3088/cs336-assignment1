@@ -133,7 +133,10 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pyrefly" },
     { name = "ruff" },
+    { name = "types-psutil" },
+    { name = "types-regex" },
 ]
 
 [package.metadata]
@@ -155,7 +158,12 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.14.10" }]
+dev = [
+    { name = "pyrefly", specifier = ">=0.46.1" },
+    { name = "ruff", specifier = ">=0.14.10" },
+    { name = "types-psutil", specifier = ">=7.1.3.20251211" },
+    { name = "types-regex", specifier = ">=2025.11.3.20251106" },
+]
 
 [[package]]
 name = "einops"
@@ -686,6 +694,22 @@ wheels = [
 ]
 
 [[package]]
+name = "pyrefly"
+version = "0.46.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/7e/b4f9f26611f72405af16af916f460025bd6d40d00952a046eab0df98bb82/pyrefly-0.46.1.tar.gz", hash = "sha256:ea6db4788cd11eb7fd7ef7f0bdeef4621861cb44cd7d62db073706022669ef4a", size = 4760174, upload-time = "2025-12-23T23:06:10.501Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/16/46/8f9d4400e4d60da6555415351b11cbe5e122cfa299194278ebf7bcf26cd3/pyrefly-0.46.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:f4975d4d2a451423727f70461bd1ef3f18c6c8c0e4bb5acf902add73bdaf6642", size = 11659836, upload-time = "2025-12-23T23:05:49.879Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/15/486b8ea769560e65152201df5d887c9f817fa4e536388e86eb6b1ce774f0/pyrefly-0.46.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:bcecd921990e56759e7ec2c91ab69aaf790dcc6c17b36054d0f42789085e0dde", size = 11269185, upload-time = "2025-12-23T23:05:52.423Z" },
+    { url = "https://files.pythonhosted.org/packages/33/bc/b5982fc9dfe2abe5d5341a3576aca3c8c5e3af24223b56d256f16df1d31b/pyrefly-0.46.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:262f6ff2c593ec575eb626dbb3309d9fbb1527cbb0dab2b4d6ae8c8f51bf2715", size = 31504426, upload-time = "2025-12-23T23:05:54.692Z" },
+    { url = "https://files.pythonhosted.org/packages/05/fd/34c9dec50075bbf471c23ec46ccca4b167490a3418aef351cfd0cdd7feeb/pyrefly-0.46.1-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:adccc7e54952a3788f7a108abc3177f9ad83b56b052fc0cb1ed7a93da5c69f71", size = 33721544, upload-time = "2025-12-23T23:05:57.465Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/2f/7c9dcf8b77ad3e3579fe7a8d2eaf3a2df8a31e8be7bc5561b369e0bc73f8/pyrefly-0.46.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7251eec7366a3a4df5e87214300645c8f7d27b1339cf30b166227aa8f07979d9", size = 34778153, upload-time = "2025-12-23T23:06:00.313Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/1f/6ffa777f3a8f1a66a96ff5b6a6f1659e2172662fec5fcbce5db0f3ff617d/pyrefly-0.46.1-py3-none-win32.whl", hash = "sha256:a5babc50ebfc2227e4209697e4e5754a10935cedba3ab26d26fd3e20625b6479", size = 10728406, upload-time = "2025-12-23T23:06:02.863Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/34/7faaee043cc6b268010e0124a82bb5793588531e3d4af2e3283588d88eb7/pyrefly-0.46.1-py3-none-win_amd64.whl", hash = "sha256:e2a784530ad8c918ad7f656957c9db8d00e484111298a6601490141cabd9966a", size = 11418624, upload-time = "2025-12-23T23:06:06.16Z" },
+    { url = "https://files.pythonhosted.org/packages/58/4f/13e0e1c2136d35c44a034c9606bce2513ed3e896df86985fedd9c1347432/pyrefly-0.46.1-py3-none-win_arm64.whl", hash = "sha256:1835206055454cc2b88bc0b6acb557c2e5bd9ae8df724bb48fd2dc3dc40ffe13", size = 10964488, upload-time = "2025-12-23T23:06:08.165Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "8.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1040,6 +1064,24 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/96/c5/258f318d68b95685c8d98fb654a38882c9d01ce5d9426bed06124f690f04/ty-0.0.1a19-py3-none-win32.whl", hash = "sha256:00b75b446357ee22bcdeb837cb019dc3bc1dc5e5013ff0f46a22dfe6ce498fe2", size = 7811441, upload-time = "2025-08-19T13:29:52.077Z" },
     { url = "https://files.pythonhosted.org/packages/fb/bb/039227eee3c0c0cddc25f45031eea0f7f10440713f12d333f2f29cf8e934/ty-0.0.1a19-py3-none-win_amd64.whl", hash = "sha256:aaef76b2f44f6379c47adfe58286f0c56041cb2e374fd8462ae8368788634469", size = 8441186, upload-time = "2025-08-19T13:29:54.53Z" },
     { url = "https://files.pythonhosted.org/packages/74/5f/bceb29009670ae6f759340f9cb434121bc5ed84ad0f07bdc6179eaaa3204/ty-0.0.1a19-py3-none-win_arm64.whl", hash = "sha256:893755bb35f30653deb28865707e3b16907375c830546def2741f6ff9a764710", size = 8000810, upload-time = "2025-08-19T13:29:56.796Z" },
+]
+
+[[package]]
+name = "types-psutil"
+version = "7.1.3.20251211"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/d5/85165865b060fed80b5991574c2ae0ddfd4786398dc8bceddfe0a8960b74/types_psutil-7.1.3.20251211.tar.gz", hash = "sha256:2c25f8fd3a1a4aebdffb861b97755c9a2d5d8019dd6ec1a2f2a77ec796652c89", size = 25198, upload-time = "2025-12-11T03:16:44.651Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/61/658be05b56aeec195386b3f5c48cfa5bdaf8e989de3e4d802eeba457bd05/types_psutil-7.1.3.20251211-py3-none-any.whl", hash = "sha256:369872d955d7d47d77f4832b41e2300f832126e3fa97eb107d2d6a294c23c650", size = 32055, upload-time = "2025-12-11T03:16:43.864Z" },
+]
+
+[[package]]
+name = "types-regex"
+version = "2025.11.3.20251106"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/91/510649fdd4cfa800b22063974785eb69877e339815a3fa798f978d7f1634/types_regex-2025.11.3.20251106.tar.gz", hash = "sha256:5f9828ed39a5a52727b637f93f7f0f909d56fa2211604ecc213fcebb509b9d50", size = 12838, upload-time = "2025-11-06T03:06:47.487Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ac/08/8ad634e76e06398689bb8a6c346e4623a3cee274a94448d85984efc5e375/types_regex-2025.11.3.20251106-py3-none-any.whl", hash = "sha256:bbc37f8c2a81770f81ac8c36857ad81c7c88782ab157803f21de42f3fffc2d89", size = 11102, upload-time = "2025-11-06T03:06:46.611Z" },
 ]
 
 [[package]]

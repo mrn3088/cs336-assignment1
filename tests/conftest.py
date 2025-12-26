@@ -15,9 +15,9 @@ class DEFAULT:
 _A = TypeVar("_A", np.ndarray, Tensor)
 
 
-def _canonicalize_array(arr: _A) -> np.ndarray:
+def _canonicalize_array(arr: _A) -> np.ndarray | Tensor:
     if isinstance(arr, Tensor):
-        arr = arr.detach().cpu().numpy()
+        return arr.detach().cpu().numpy()
     return arr
 
 
@@ -65,6 +65,8 @@ class NumpySnapshot:
             assert self.default_test_name is not None, "Test name must be provided or set as default"
             test_name = self.default_test_name
 
+        # Type narrowing: test_name is now guaranteed to be str
+        assert isinstance(test_name, str), "test_name must be a string"
         snapshot_path = self._get_snapshot_path(test_name)
 
         # Convert single array to dictionary for consistent handling
@@ -133,6 +135,8 @@ class Snapshot:
             assert self.default_test_name is not None, "Test name must be provided or set as default"
             test_name = self.default_test_name
 
+        # Type narrowing: test_name is now guaranteed to be str
+        assert isinstance(test_name, str), "test_name must be a string"
         snapshot_path = self._get_snapshot_path(test_name)
 
         # Load the snapshot
