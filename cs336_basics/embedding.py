@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch import Tensor
 from jaxtyping import Float, Int
 
+from cs336_basics.utils import init_embedding_weights
+
 
 class Embedding(nn.Module):
     """An embedding module."""
@@ -26,7 +28,7 @@ class Embedding(nn.Module):
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
         self.weight = nn.Parameter(torch.empty((num_embeddings, embedding_dim), device=device, dtype=dtype))
-        nn.init.trunc_normal_(self.weight, mean=0.0, std=1.0, a=-3.0, b=3.0)
+        init_embedding_weights(self.weight)
 
     def forward(self, x: Int[Tensor, " ... "]) -> Float[Tensor, " ... embedding_dim"]:
         """
